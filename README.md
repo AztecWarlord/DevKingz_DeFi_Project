@@ -67,37 +67,6 @@ Start a local node:
 anvil
 ```
 
-In a second terminal, run scripts as needed (examples):
-
-```bash
-forge script script/DeployDevKingz.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
-forge script script/DeployKingzToken.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
-forge script script/DeployStakeDevKingz.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
-```
-
-> Replace placeholders with your environment values. For local testing, use Anvil keys only.
-
-## Project Structure
-
-```text
-src/
-	devKingz.sol
-	kingzToken.sol
-	StakeDevKingz.sol
-
-script/
-	DeployDevKingz.s.sol
-	DeployKingzToken.s.sol
-	DeployMockDevKingz.s.sol
-	DeployStakeDevKingz.s.sol
-	HelperConfig.s.sol
-	Interactions.s.sol
-
-test/
-	mocks/
-	uint/
-```
-
 ## Roadmap
 
 - [x] Core NFT contract
