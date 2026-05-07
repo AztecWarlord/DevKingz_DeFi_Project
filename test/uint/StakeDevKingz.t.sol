@@ -2,19 +2,18 @@
 
 pragma solidity ^0.8.19;
 
-import {StakeDevKingz}  from "../../src/StakeDevKingz.sol";
+import {StakeDevKingz} from "../../src/StakeDevKingz.sol";
 import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {DeployStakeDevKingz} from "../../script/DeployStakeDevKingz.s.sol";
 import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
 // import {DevKingz} from "../../src/devKingz.sol";
 // import {DeployDevKingz} from "../../script/DeployDevKingz.s.sol";
-// import {HelperConfig} from "../../script/HelperConfig.s.sol"; 
+// import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 // This contract will test the functionality of the StakeDevKingz smart contract.
 contract StakeDevKingzTest is Test {
-
     StakeDevKingz public stakeDevKingz;
     DevKingz public devKingz;
     address public initialOwner = makeAddr("owner");
@@ -44,8 +43,8 @@ contract StakeDevKingzTest is Test {
     function setUp() external {
         DeployMockDevKingz deployer = new DeployMockDevKingz();
         DeployStakeDevKingz deployStake = new DeployStakeDevKingz();
-        devKingz = deployer.deployMockDevKingz();       
-        (stakeDevKingz, ) = deployStake.deployStakeDevKingz(address(devKingz), address(stakeDevKingz));
+        devKingz = deployer.deployMockDevKingz();
+        (stakeDevKingz,) = deployStake.deployStakeDevKingz(address(devKingz), address(stakeDevKingz));
     }
     // Mints a DevKingz NFT to the USER
     modifier mintDevKingzNFT() {
@@ -57,7 +56,7 @@ contract StakeDevKingzTest is Test {
     }
 
     // Tests staking functionality
-    function testStakeNFT() external mintDevKingzNFT() {
+    function testStakeNFT() external mintDevKingzNFT {
         vm.startPrank(USER);
 
         // Approve the staking contract to transfer the user's NFTs
@@ -69,7 +68,7 @@ contract StakeDevKingzTest is Test {
         uint256 stakingTime = block.timestamp;
         uint256 initialCount = stakeDevKingz.totalStakedDevKingz();
         stakeDevKingz.stakeNFTs(tokenIds);
-        
+
         // Verify NFT transferred to staking contract
         assertEq(devKingz.balanceOf(address(stakeDevKingz)), 1);
         assertEq(devKingz.balanceOf(USER), 0);
@@ -84,7 +83,7 @@ contract StakeDevKingzTest is Test {
         vm.stopPrank();
     }
 
-    function testChecksIfUserIsDevKingzHolder() external mintDevKingzNFT() {
+    function testChecksIfUserIsDevKingzHolder() external mintDevKingzNFT {
         vm.prank(USER);
 
         // Check if USER is a DevKingz holder
@@ -99,38 +98,33 @@ contract StakeDevKingzTest is Test {
     function testRevertsWhenStakingEmptyArray() external {
         vm.startPrank(USER);
         uint256[] memory emptyArray = new uint256[](0);
-        
+
         vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__EmptyTokenArray.selector));
         stakeDevKingz.stakeNFTs(emptyArray);
         vm.stopPrank();
     }
 
-    function testRevertsWhenStakingAlreadyStakedToken() external mintDevKingzNFT() stakeDevKingzNFTMod() {
+    function testRevertsWhenStakingAlreadyStakedToken() external mintDevKingzNFT stakeDevKingzNFTMod {
         vm.startPrank(USER);
         devKingz.setApprovalForAll(address(stakeDevKingz), true);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0;
-        
+
         // Second stake should revert
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                StakeDevKingz.StakeDevKingz__TokenAlreadyStaked.selector,
-                tokenIds[0]
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__TokenAlreadyStaked.selector, tokenIds[0]));
         stakeDevKingz.stakeNFTs(tokenIds);
         console.log("Staking already staked token reverted as expected.");
         vm.stopPrank();
     }
 
-    function testStakingEmitsCorrectEvents() external mintDevKingzNFT() {
+    function testStakingEmitsCorrectEvents() external mintDevKingzNFT {
         vm.startPrank(USER);
         devKingz.setApprovalForAll(address(stakeDevKingz), true);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0;
-        
+
         // Expect event emission
         vm.expectEmit(true, true, false, true);
         emit NFTStaked(USER, 0, block.timestamp);
@@ -139,13 +133,13 @@ contract StakeDevKingzTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertsWhenStakingWithoutApproval() external mintDevKingzNFT() {
+    function testRevertsWhenStakingWithoutApproval() external mintDevKingzNFT {
         vm.startPrank(USER);
         // Don't approve staking contract
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0;
-        
+
         // Should revert when transferFrom is called without approval
         vm.expectRevert();
         stakeDevKingz.stakeNFTs(tokenIds);
@@ -153,22 +147,22 @@ contract StakeDevKingzTest is Test {
         vm.stopPrank();
     }
 
-    function testStakingMultipleNFTsUpdatesAllVaultEntries() external mintDevKingzNFT() {
+    function testStakingMultipleNFTsUpdatesAllVaultEntries() external mintDevKingzNFT {
         vm.startPrank(USER);
-        
+
         // Mint additional NFTs
         devKingz.mintNft(tokenUri);
         devKingz.mintNft(tokenUri);
-        
+
         devKingz.setApprovalForAll(address(stakeDevKingz), true);
-        
+
         uint256[] memory tokenIds = new uint256[](3);
         tokenIds[0] = 0;
         tokenIds[1] = 1;
         tokenIds[2] = 2;
-        
+
         stakeDevKingz.stakeNFTs(tokenIds);
-        
+
         // Verify all vault entries
 
         uint256 mintedDevs = 3;
@@ -177,23 +171,23 @@ contract StakeDevKingzTest is Test {
             assertEq(owner, USER);
             assertEq(lastUpdateTime, block.timestamp);
         }
-        
+
         assertEq(stakeDevKingz.totalStakedDevKingz(), 3);
         console.log("Staked count is:", stakeDevKingz.totalStakedDevKingz());
         vm.stopPrank();
     }
 
-    function testNFTStakedByNonOwner() external mintDevKingzNFT() {
+    function testNFTStakedByNonOwner() external mintDevKingzNFT {
         // USER owns tokenId 0, SCAMMER tries to stake it without permission
         vm.startPrank(SCAMMER);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0; // USER's NFT
-        
+
         // Expect revert when SCAMMER tries to stake USER's NFT
         vm.expectRevert();
         stakeDevKingz.stakeNFTs(tokenIds);
-        
+
         vm.stopPrank();
     }
 
@@ -213,24 +207,24 @@ contract StakeDevKingzTest is Test {
         vm.startPrank(USER);
         uint256 tokenId = 0; // Token minted and staked by modifiers
         uint256 initialCount = stakeDevKingz.totalStakedDevKingz();
-        
+
         // Expect events
         vm.expectEmit(true, true, false, true);
         emit NFTUnstaked(USER, tokenId, block.timestamp);
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = tokenId;
         stakeDevKingz.unstakeNFT(tokenIds);
-        
+
         // Verify NFT returned to USER
         assertEq(devKingz.ownerOf(tokenId), USER);
         assertEq(devKingz.balanceOf(USER), 1);
         assertEq(devKingz.balanceOf(address(stakeDevKingz)), 0);
-        
+
         // Verify vault entry cleared
         (address owner, uint256 lastUpdateTime) = stakeDevKingz.vault(tokenId);
         assertEq(owner, address(0));
         assertEq(lastUpdateTime, 0);
-        
+
         // Verify total staked count decremented
         assertEq(stakeDevKingz.totalStakedDevKingz(), initialCount - 1);
         vm.stopPrank();
@@ -267,7 +261,7 @@ contract StakeDevKingzTest is Test {
         unstakeIds[1] = 2;
 
         stakeDevKingz.unstakeNFT(unstakeIds); // Unstake tokenId 0 and 2
-        
+
         // Verify tokenId 0 and 2 returned to USER show tokenIds in cosole log
         assertEq(devKingz.ownerOf(0), USER);
         assertEq(devKingz.ownerOf(2), USER);
@@ -288,13 +282,7 @@ contract StakeDevKingzTest is Test {
         vm.startPrank(SCAMMER);
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = tokenId;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                StakeDevKingz.StakeDevKingz__NotTokenOwner.selector,
-                SCAMMER,
-                tokenId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__NotTokenOwner.selector, SCAMMER, tokenId));
         stakeDevKingz.unstakeNFT(tokenIds);
         vm.stopPrank();
     }
@@ -302,16 +290,11 @@ contract StakeDevKingzTest is Test {
     function testUnstakeRevertsWhenTokenNotStaked() external mintDevKingzNFT {
         uint256 tokenId = 0; // Token minted but NOT staked by USER
         // Don't stake it
-        
+
         vm.startPrank(USER);
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = tokenId;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                StakeDevKingz.StakeDevKingz__TokenNotStaked.selector,
-                tokenId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__TokenNotStaked.selector, tokenId));
         stakeDevKingz.unstakeNFT(tokenIds);
         vm.stopPrank();
     }
@@ -319,11 +302,11 @@ contract StakeDevKingzTest is Test {
     // function testUnstakeWithZeroRewards() external {
     //     uint256 tokenId = _mintNFT(USER);
     //     _stakeNFT(USER, tokenId);
-        
+
     //     // Unstake immediately (0 time elapsed = 0 rewards)
     //     vm.prank(USER);
     //     stakeDevKingz.unstakeNFT(tokenId);
-        
+
     //     // Verify no RewardsClaimed event (tested by not expecting it)
     //     assertEq(devKingz.ownerOf(tokenId), USER);
     // }
@@ -338,6 +321,5 @@ contract StakeDevKingzTest is Test {
 
     // function testCannotUnstakeSameTokenTwice() external {
     // }
-    
 }
 

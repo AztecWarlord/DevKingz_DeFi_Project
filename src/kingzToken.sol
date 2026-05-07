@@ -31,7 +31,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /*
  * @title Kingz Token (KINGZ)
  * @author Michael Vargas
- * Minting (Stability Mechanism): 
+ * Minting (Stability Mechanism):
  * Collateral Type: Crypto
  *
  * This is the contract meant to be owned by StakeDevKingz. It is a ERC20 token that can be minted and burned by the StakeDevKingz smart contract.

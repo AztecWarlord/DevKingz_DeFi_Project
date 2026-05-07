@@ -8,7 +8,7 @@ contract DevKingz is ERC721 {
     // Mock DevKingz NFT contract implementation
 
     uint256 public _exists;
-    
+
     error DevKingz__TokenUriNotFound();
 
     mapping(uint256 => string) private s_tokenIdToUri;
@@ -24,11 +24,8 @@ contract DevKingz is ERC721 {
         s_tokenCounter = s_tokenCounter + 1;
     }
 
-    function tokenURI(
-        uint256 tokenId
-    ) public view override returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId); // Reverts if token doesn't exist
         return s_tokenIdToUri[tokenId];
     }
-
 }

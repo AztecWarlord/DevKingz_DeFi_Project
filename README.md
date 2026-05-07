@@ -82,11 +82,16 @@ anvil
 - Do not use production private keys in local scripts.
 - Report security concerns privately to the project maintainer before public disclosure.
 
-## Contributing
-
-Contributions are welcome. Please open an issue first for major changes, then submit a pull request with clear scope and testing notes.
-
 ## License
 
 No License listed.
 
+## Acknowledgments
+
+- Foundry
+- Chainlink
+- OpenZeppelin
+- Cyfrin/foundry-devops
+
+##
+[![Michael Vargas Linkedin](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/michael-vargas-a5b51b223/)

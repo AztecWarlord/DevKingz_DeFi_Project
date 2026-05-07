@@ -5,7 +5,6 @@ pragma solidity ^0.8.19;
 import {Script} from "forge-std/Script.sol";
 import {KingzToken} from "../src/kingzToken.sol";
 
-
 contract DeployKingzToken is Script {
     function run() public {}
 

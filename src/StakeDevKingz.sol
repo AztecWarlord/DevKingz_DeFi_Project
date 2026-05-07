@@ -69,8 +69,10 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         kingzToken = IERC20(_kingzTokenAddress);
     }
 
-    /** This contract allows users to stake their DevKingz NFTs and earn KINGZ token rewards. */
-    function stakeNFTs(uint256[] calldata tokenIds) external nonReentrant{
+    /**
+     * This contract allows users to stake their DevKingz NFTs and earn KINGZ token rewards.
+     */
+    function stakeNFTs(uint256[] calldata tokenIds) external nonReentrant {
         _stakeNFTs(tokenIds);
     }
 
@@ -86,17 +88,14 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
             if (vault[tokenId].owner != address(0)) revert StakeDevKingz__TokenAlreadyStaked(tokenId);
 
             // Record the staking
-            vault[tokenId] = StakerInfo({
-                owner: msg.sender,
-                lastUpdateTime: block.timestamp
-            });
-            
+            vault[tokenId] = StakerInfo({owner: msg.sender, lastUpdateTime: block.timestamp});
+
             // Add to owner's staked tokens
             ownerToStakedTokens[msg.sender].push(tokenId);
-            
+
             // Increment total staked count
             ++totalStakedDevKingz;
-            
+
             // Transfer the NFT to this contract (validates ownership)
             devKingz.safeTransferFrom(msg.sender, address(this), tokenId);
 
@@ -105,7 +104,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function unstakeNFT(uint256[] calldata tokenIds) public  nonReentrant {
+    function unstakeNFT(uint256[] calldata tokenIds) public nonReentrant {
         _unstakeNFT(tokenIds);
     }
 
@@ -113,7 +112,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         uint256 length = tokenIds.length;
         if (length == 0) revert StakeDevKingz__EmptyTokenArray();
 
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             uint256 tokenId = tokenIds[i];
 
             StakerInfo memory staker = vault[tokenId];
@@ -144,22 +143,22 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
                 emit RewardsClaimed(msg.sender, pendingRewards);
             }
 
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
     }
-
-
 
     function depositRewards(uint256 amount) external {
         // Implementation for depositing KINGZ tokens into the contract for rewards
         kingzToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function claimRewards() external nonReentrant{
-    // Implementation for claiming KINGZ token rewards
+    function claimRewards() external nonReentrant {
+        // Implementation for claiming KINGZ token rewards
         uint256 totalRewards = 0;
         uint256[] memory stakedTokens = ownerToStakedTokens[msg.sender];
-        
+
         for (uint256 i = 0; i < stakedTokens.length; ++i) {
             uint256 tokenId = stakedTokens[i];
             uint256 rewards = _calculateRewards(tokenId);
@@ -168,13 +167,13 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
                 vault[tokenId].lastUpdateTime = block.timestamp; // Update last claim time
             }
         }
-        
+
         if (totalRewards > 0) {
             uint256 contractBalance = kingzToken.balanceOf(address(this));
             if (contractBalance < totalRewards) {
                 revert StakeDevKingz__InsufficientRewardBalance(totalRewards, contractBalance);
             }
-            
+
             kingzToken.safeTransfer(msg.sender, totalRewards);
             emit RewardsClaimed(msg.sender, totalRewards);
         }
@@ -197,7 +196,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     function _removeTokenFromOwnerArray(address owner, uint256 tokenId) internal {
         uint256[] storage stakedTokens = ownerToStakedTokens[owner];
         uint256 length = stakedTokens.length;
-        
+
         for (uint256 i = 0; i < length; i++) {
             if (stakedTokens[i] == tokenId) {
                 // Move last element to this position and pop
@@ -212,20 +211,18 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         return ownerToStakedTokens[owner];
     }
 
-
-    function getStakerInfo(uint256 tokenId) external view returns (address owner, uint256 lastUpdateTime, uint256 pendingRewards) {
+    function getStakerInfo(uint256 tokenId)
+        external
+        view
+        returns (address owner, uint256 lastUpdateTime, uint256 pendingRewards)
+    {
         StakerInfo storage stakerInfo = vault[tokenId];
         owner = stakerInfo.owner;
         lastUpdateTime = stakerInfo.lastUpdateTime;
         pendingRewards = _calculateRewards(tokenId);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) public pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) public pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 }
