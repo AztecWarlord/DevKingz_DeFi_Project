@@ -28,17 +28,14 @@ pragma solidity ^0.8.19;
 // import {DevKingz} from "./devKingz.sol";
 import {DevKingz} from "../test/mocks/MockDevKingzNFT.sol";
 import {KingzToken} from "./kingzToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-using SafeERC20 for IERC20;
 
 contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     // State Variables
     DevKingz public devKingz;
-    IERC20 public kingzToken;
+    KingzToken public kingzToken;
     uint256 public totalStakedDevKingz;
     uint256 public constant REWARD_RATE_PER_SECOND = 1e18; // 1 KINGZ token per second
 
@@ -66,7 +63,8 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
     constructor(address _devKingzAddress, address _kingzTokenAddress) {
         devKingz = DevKingz(_devKingzAddress);
-        kingzToken = IERC20(_kingzTokenAddress);
+        kingzToken = KingzToken(_kingzTokenAddress);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -104,7 +102,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function unstakeNFT(uint256[] calldata tokenIds) public nonReentrant {
+    function unstakeNFT(uint256[] calldata tokenIds) external nonReentrant {
         _unstakeNFT(tokenIds);
     }
 
@@ -130,16 +128,12 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
             // Transfer NFT back to owner
             _removeTokenFromOwnerArray(msg.sender, tokenId);
-            devKingz.safeTransferFrom(address(this), msg.sender, tokenId);
             emit NFTUnstaked(msg.sender, tokenId, block.timestamp);
+            devKingz.safeTransferFrom(address(this), msg.sender, tokenId);
 
             // Transfer rewards if any (after state changes)
             if (pendingRewards > 0) {
-                uint256 contractBalance = kingzToken.balanceOf(address(this));
-                if (contractBalance < pendingRewards) {
-                    revert StakeDevKingz__InsufficientRewardBalance(pendingRewards, contractBalance);
-                }
-                kingzToken.safeTransfer(msg.sender, pendingRewards);
+                kingzToken.mint(msg.sender, pendingRewards);
                 emit RewardsClaimed(msg.sender, pendingRewards);
             }
 
@@ -147,11 +141,6 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
                 ++i;
             }
         }
-    }
-
-    function depositRewards(uint256 amount) external {
-        // Implementation for depositing KINGZ tokens into the contract for rewards
-        kingzToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function claimRewards() external nonReentrant {
@@ -169,12 +158,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
 
         if (totalRewards > 0) {
-            uint256 contractBalance = kingzToken.balanceOf(address(this));
-            if (contractBalance < totalRewards) {
-                revert StakeDevKingz__InsufficientRewardBalance(totalRewards, contractBalance);
-            }
-
-            kingzToken.safeTransfer(msg.sender, totalRewards);
+            kingzToken.mint(msg.sender, totalRewards);
             emit RewardsClaimed(msg.sender, totalRewards);
         }
     }
