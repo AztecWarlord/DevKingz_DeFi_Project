@@ -27,7 +27,7 @@ The goal is to unify the DevKingz NFT project with a gamified DeFi ecosystem and
 - **Solidity** for smart contracts
 - **Foundry** (`forge`, `cast`, `anvil`) for build, testing, and scripting
 - **OpenZeppelin Contracts** for audited contract primitives
-- **Chainlink Brownie Contracts** (library dependency)
+- **Chainlink Brownie Contracts** (library dependency) utilizes Chainlink VRF to randomize NFT minting.
 - **Solmate** (library dependency)
 
 ## Getting Started
