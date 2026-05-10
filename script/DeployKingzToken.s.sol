@@ -10,7 +10,7 @@ contract DeployKingzToken is Script {
 
     function deployKingzToken() public returns (KingzToken) {
         vm.startBroadcast();
-        KingzToken kingzToken = new KingzToken(address(this));
+        KingzToken kingzToken = new KingzToken(msg.sender);
         vm.stopBroadcast();
         return kingzToken;
     }

@@ -9,13 +9,11 @@ import {KingzToken} from "../src/kingzToken.sol";
 contract DeployStakeDevKingz is Script {
     function run() public {}
 
-    function deployStakeDevKingz(address devKingzAddress, address kingzTokenAddress)
-        public
-        returns (StakeDevKingz, KingzToken)
-    {
-        KingzToken kingzToken = new KingzToken(address(this));
+    function deployStakeDevKingz(address devKingzAddress) public returns (StakeDevKingz, KingzToken) {
         vm.startBroadcast();
-        StakeDevKingz stakeDevKingz = new StakeDevKingz(devKingzAddress, kingzTokenAddress);
+        KingzToken kingzToken = new KingzToken(msg.sender);
+        StakeDevKingz stakeDevKingz = new StakeDevKingz(devKingzAddress, address(kingzToken));
+        kingzToken.transferOwnership(address(stakeDevKingz));
         vm.stopBroadcast();
         return (stakeDevKingz, kingzToken);
     }

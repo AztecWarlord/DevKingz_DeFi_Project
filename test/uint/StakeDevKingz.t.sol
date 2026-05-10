@@ -5,7 +5,9 @@ pragma solidity ^0.8.19;
 import {StakeDevKingz} from "../../src/StakeDevKingz.sol";
 import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {DeployStakeDevKingz} from "../../script/DeployStakeDevKingz.s.sol";
+import {DeployKingzToken} from "../../script/DeployKingzToken.s.sol";
 import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
+import {KingzToken} from "../../src/kingzToken.sol";
 // import {DevKingz} from "../../src/devKingz.sol";
 // import {DeployDevKingz} from "../../script/DeployDevKingz.s.sol";
 // import {HelperConfig} from "../../script/HelperConfig.s.sol";
@@ -16,6 +18,8 @@ import {Vm} from "forge-std/Vm.sol";
 contract StakeDevKingzTest is Test {
     StakeDevKingz public stakeDevKingz;
     DevKingz public devKingz;
+    KingzToken public kingz;
+
     address public initialOwner = makeAddr("owner");
 
     struct StakerInfo {
@@ -41,11 +45,23 @@ contract StakeDevKingzTest is Test {
     event RewardsClaimed(address indexed owner, uint256 amount);
 
     function setUp() external {
-        DeployMockDevKingz deployer = new DeployMockDevKingz();
-        DeployStakeDevKingz deployStake = new DeployStakeDevKingz();
-        devKingz = deployer.deployMockDevKingz();
-        (stakeDevKingz,) = deployStake.deployStakeDevKingz(address(devKingz), address(stakeDevKingz));
+        DeployMockDevKingz mockDeployer = new DeployMockDevKingz();
+        devKingz = mockDeployer.deployMockDevKingz();
+
+        DeployStakeDevKingz stakeDeployer = new DeployStakeDevKingz();
+        (stakeDevKingz,kingz) = stakeDeployer.deployStakeDevKingz(address(devKingz));
+
+        assertEq(kingz.owner(), address(stakeDevKingz));
     }
+
+    // function setUp() external {
+    //     DeployMockDevKingz deployer = new DeployMockDevKingz();
+    //     DeployStakeDevKingz deployStake = new DeployStakeDevKingz();
+    //     DeployKingzToken deployKingz = new DeployKingzToken();
+    //     devKingz = deployer.deployMockDevKingz();
+    //     (stakeDevKingz,) = deployStake.deployStakeDevKingz(address(devKingz), address(stakeDevKingz));
+    // }
+
     // Mints a DevKingz NFT to the USER
     modifier mintDevKingzNFT() {
         vm.startPrank(USER);
