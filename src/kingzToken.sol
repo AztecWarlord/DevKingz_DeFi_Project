@@ -50,7 +50,7 @@ contract KingzToken is ERC20Burnable, Ownable {
 
     function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
-        if (_amount <= 0) {
+        if (_amount == 0) {
             revert KingzToken__MustBeMoreThanZero();
         }
         if (balance < _amount) {
@@ -63,7 +63,7 @@ contract KingzToken is ERC20Burnable, Ownable {
         if (_to == address(0)) {
             revert KingzToken__NotZeroAddress();
         }
-        if (_amount <= 0) {
+        if (_amount == 0) {
             revert KingzToken__MustBeMoreThanZero();
         }
         _mint(_to, _amount);

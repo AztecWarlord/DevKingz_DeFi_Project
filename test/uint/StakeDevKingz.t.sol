@@ -17,7 +17,7 @@ import {Vm} from "forge-std/Vm.sol";
 contract StakeDevKingzTest is Test {
     StakeDevKingz public stakeDevKingz;
     DevKingz public devKingz;
-    KingzToken public kingz;
+    KingzToken public kingzToken;
 
     address public initialOwner = makeAddr("owner");
 
@@ -46,21 +46,12 @@ contract StakeDevKingzTest is Test {
     function setUp() external {
         DeployMockDevKingz mockDeployer = new DeployMockDevKingz();
         devKingz = mockDeployer.deployMockDevKingz();
-
         DeployStakeDevKingz stakeDeployer = new DeployStakeDevKingz();
-        (stakeDevKingz,kingz) = stakeDeployer.deployStakeDevKingz(address(devKingz));
-        kingz.transferOwnership(address(stakeDevKingz));
-
-        assertEq(kingz.owner(), address(stakeDevKingz));
+        (stakeDevKingz, kingzToken) = stakeDeployer.deployStakeDevKingz(address(devKingz));
+        console.log("StakeDevKingz deployed at:", address(stakeDevKingz));
+        console.log("KingzToken owner", kingzToken.owner());
+        assertEq(kingzToken.owner(), address(stakeDevKingz));
     }
-
-    // function setUp() external {
-    //     DeployMockDevKingz deployer = new DeployMockDevKingz();
-    //     DeployStakeDevKingz deployStake = new DeployStakeDevKingz();
-    //     DeployKingzToken deployKingz = new DeployKingzToken();
-    //     devKingz = deployer.deployMockDevKingz();
-    //     (stakeDevKingz,) = deployStake.deployStakeDevKingz(address(devKingz), address(stakeDevKingz));
-    // }
 
     // Mints a DevKingz NFT to the USER
     modifier mintDevKingzNFT() {
@@ -69,6 +60,11 @@ contract StakeDevKingzTest is Test {
         devKingz.mintNft(tokenUri);
         vm.stopPrank();
         _;
+    }
+
+    function testStakingContractIsOwnerOfKingzToken() external {
+        assertEq(kingzToken.owner(), address(stakeDevKingz));
+        console.log("StakeDevKingz is the owner of KingzToken as expected.");
     }
 
     // Tests staking functionality
