@@ -46,7 +46,6 @@ contract KingzToken is ERC20Burnable, Ownable {
         if (initialOwner == address(0)) {
             revert KingzToken__NotZeroAddress();
         }
-        _transferOwnership(initialOwner);
     }
 
     function burn(uint256 _amount) public override onlyOwner {

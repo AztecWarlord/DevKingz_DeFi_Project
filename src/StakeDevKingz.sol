@@ -64,6 +64,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     constructor(address _devKingzAddress, address _kingzTokenAddress) {
         devKingz = DevKingz(_devKingzAddress);
         kingzToken = KingzToken(_kingzTokenAddress);
+        kingzToken.transferOwnership(address(this));
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 

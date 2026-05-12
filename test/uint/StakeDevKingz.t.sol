@@ -5,7 +5,6 @@ pragma solidity ^0.8.19;
 import {StakeDevKingz} from "../../src/StakeDevKingz.sol";
 import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {DeployStakeDevKingz} from "../../script/DeployStakeDevKingz.s.sol";
-import {DeployKingzToken} from "../../script/DeployKingzToken.s.sol";
 import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
 import {KingzToken} from "../../src/kingzToken.sol";
 // import {DevKingz} from "../../src/devKingz.sol";
@@ -50,6 +49,7 @@ contract StakeDevKingzTest is Test {
 
         DeployStakeDevKingz stakeDeployer = new DeployStakeDevKingz();
         (stakeDevKingz,kingz) = stakeDeployer.deployStakeDevKingz(address(devKingz));
+        kingz.transferOwnership(address(stakeDevKingz));
 
         assertEq(kingz.owner(), address(stakeDevKingz));
     }
