@@ -62,7 +62,8 @@ contract StakeDevKingzTest is Test {
         _;
     }
 
-    function testStakingContractIsOwnerOfKingzToken() external {
+    // Tests that the staking contract is the owner of the KingzToken contract
+    function testStakingContractIsOwnerOfKingzToken() external view {
         assertEq(kingzToken.owner(), address(stakeDevKingz));
         console.log("StakeDevKingz is the owner of KingzToken as expected.");
     }
@@ -311,21 +312,42 @@ contract StakeDevKingzTest is Test {
         vm.stopPrank();
     }
 
-    // function testUnstakeWithZeroRewards() external {
-    //     uint256 tokenId = _mintNFT(USER);
-    //     _stakeNFT(USER, tokenId);
-
-    //     // Unstake immediately (0 time elapsed = 0 rewards)
-    //     vm.prank(USER);
-    //     stakeDevKingz.unstakeNFT(tokenId);
-
-    //     // Verify no RewardsClaimed event (tested by not expecting it)
-    //     assertEq(devKingz.ownerOf(tokenId), USER);
-    // }
+    function testUnstakeWithZeroRewards() external mintDevKingzNFT stakeDevKingzNFTMod {
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 0; // Token minted and staked by modifiers
+        // Unstake immediately (0 time elapsed = 0 rewards)
+        vm.prank(USER);
+        stakeDevKingz.unstakeNFT(tokenIds);
+        // Verify no RewardsClaimed event (tested by not expecting it)
+        assertEq(devKingz.ownerOf(tokenIds[0]), USER);
+        assertEq(stakeDevKingz.calculateRewards(tokenIds[0]), 0);
+        console.log("Claimable rewards:", stakeDevKingz.calculateRewards(tokenIds[0]));
+        console.log("DevKingz NFT unstaked:", tokenIds[0]);
+    }
 
     modifier advanceTime(uint256 secondsToAdvance) {
         vm.warp(block.timestamp + secondsToAdvance);
         _;
+    }
+
+    function testPendingRewardsAfterTimeElapsed() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
+        uint256 tokenId = 0; // Token minted and staked by modifiers
+        uint256 expectedRewards = 1 days * REWARD_RATE_PER_SECOND;
+        uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
+        assertEq(actualRewards, expectedRewards);
+        console.log("Expected rewards after 1 day:", expectedRewards);
+        console.log("Actual rewards calculated:", actualRewards);
+    }
+
+    function testPendingRewardsForMultipleNFTs() external mintMultipleNFTs stakeMultipleNFTs advanceTime(2 days) {
+        uint256 expectedRewardsPerNFT = 2 days * REWARD_RATE_PER_SECOND;
+        for (uint256 tokenId = 0; tokenId < 3; tokenId++) {
+            uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
+            assertEq(actualRewards, expectedRewardsPerNFT);
+            console.log("Expected rewards for tokenId", tokenId, ":", expectedRewardsPerNFT);
+            console.log("Actual rewards calculated for tokenId", tokenId, ":", actualRewards);
+            console.log("Total rewards for all 3 NFTs should be:", expectedRewardsPerNFT * 3);
+        }
     }
 
     // function testUnstakeCalculatesCorrectRewards() external {

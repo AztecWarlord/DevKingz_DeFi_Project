@@ -37,7 +37,8 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     DevKingz public devKingz;
     KingzToken public kingzToken;
     uint256 public totalStakedDevKingz;
-    uint256 public constant REWARD_RATE_PER_SECOND = 1e18; // 1 KINGZ token per second
+    uint256 public rewardPerDevKingzStored;
+    uint256 public lastDistributionTime;
 
     struct StakerInfo {
         address owner;
@@ -47,11 +48,15 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     // Mappings
     mapping(uint256 => StakerInfo) public vault; // tokenId => Staker
     mapping(address => uint256[]) private ownerToStakedTokens;
+    mapping(uint256 => uint256) public tokenRewardPerDevKingzPaid; // tokenId => rewardPerDevKingz at last update
+    mapping(uint256 => uint256) public tokenRewards; // tokenId => accumulated rewards
 
     // Events
     event NFTStaked(address indexed owner, uint256 indexed tokenId, uint256 timestamp);
     event NFTUnstaked(address indexed owner, uint256 indexed tokenId, uint256 timestamp);
     event RewardsClaimed(address indexed owner, uint256 amount);
+    // added refactor
+    event RewardsDistributed(uint256 amount, uint256 rewardPerDevKingzStored); // Emitted when rewards are distributed to stakers
 
     // Custom Errors
     error StakeDevKingz__InsufficientRewardBalance(uint256 required, uint256 available);
@@ -60,6 +65,9 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     error StakeDevKingz__EmptyTokenArray();
     error StakeDevKingz__NotTokenContract();
     error StakeDevKingz__TokenAlreadyStaked(uint256 tokenId);
+    // added refactor errors
+    error StakeDevKingz__NoStakedNFTs();
+    error StakeDevKingz__ZeroAmount(); // For zero reward distribution earnings
 
     constructor(address _devKingzAddress, address _kingzTokenAddress) {
         devKingz = DevKingz(_devKingzAddress);
@@ -74,6 +82,64 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         _stakeNFTs(tokenIds);
     }
 
+    function unstakeNFT(uint256[] calldata tokenIds) external nonReentrant {
+        _unstakeNFT(tokenIds);
+    }
+
+    /**
+     * @notice Claims all pending KINGZ rewards for caller's staked NFTs
+     */
+    function claimRewards() external nonReentrant {
+        uint256 totalRewards = 0;
+        uint256[] memory stakedTokens = ownerToStakedTokens[msg.sender];
+
+        for (uint256 i = 0; i < stakedTokens.length; ++i) {
+            uint256 tokenId = stakedTokens[i];
+
+            // Snapshot accumulated rewards before resetting
+            _updateReward(tokenId);
+            totalRewards += tokenRewards[tokenId];
+
+            // Reset accumulated rewards for this token
+            tokenRewards[tokenId] = 0;
+        }
+
+        if (totalRewards > 0) {
+            // Transfer from contract balance (minted at distribution time)
+            kingzToken.transfer(msg.sender, totalRewards);
+            emit RewardsClaimed(msg.sender, totalRewards);
+        }
+    }
+
+    /**
+     * @notice Distributes a fixed amount of KINGZ split pro-rata across all staked NFTs
+     * @param amount Total amount of KINGZ to distribute among stakers.
+     */
+    function distributeRewards(uint256 amount) external {
+        if (totalStakedDevKingz == 0) revert StakeDevKingz__NoStakers();
+        if (amount == 0) revert StakeDevKingz__ZeroAmount();
+
+        // Update the global accumulator — scaled by 1e18 to preserve precision
+        rewardPerDevKingzStored += (amount * 1e18) / totalStakedDevKingz;
+        lastDistributionTime = block.timestamp;
+
+        // Mint the total reward amount into this contract to be claimed later
+        kingzToken.mint(address(this), amount);
+
+        emit RewardsDistributed(amount, rewardPerDevKingzStored);
+    }
+
+    /**
+     * @notice Returns the pending rewards for a given tokenId
+     */
+    function calculateRewards(uint256 tokenId) external view returns (uint256) {
+        return _earned(tokenId);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function _stakeNFTs(uint256[] calldata tokenIds) internal {
         // Prevents staking with empty array
         if (tokenIds.length == 0) revert StakeDevKingz__EmptyTokenArray();
@@ -84,6 +150,9 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
             // Check if token is already staked
             if (vault[tokenId].owner != address(0)) revert StakeDevKingz__TokenAlreadyStaked(tokenId);
+
+            // Snapshot accumulated Before staking to ensure new stakers don't earn rewards for past distributions.
+            _updateReward(tokenId);
 
             // Record the staking
             vault[tokenId] = StakerInfo({owner: msg.sender, lastUpdateTime: block.timestamp});
@@ -102,10 +171,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function unstakeNFT(uint256[] calldata tokenIds) external nonReentrant {
-        _unstakeNFT(tokenIds);
-    }
-
+    // Implementation for unstaking DevKingz NFTs and claiming rewards
     function _unstakeNFT(uint256[] calldata tokenIds) internal {
         uint256 length = tokenIds.length;
         if (length == 0) revert StakeDevKingz__EmptyTokenArray();
@@ -120,7 +186,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
             if (staker.owner != msg.sender) revert StakeDevKingz__NotTokenOwner(msg.sender, tokenId);
 
             // Calculate pending rewards
-            uint256 pendingRewards = _calculateRewards(tokenId);
+            uint256 pendingRewards = _earned(tokenId);
 
             // CEI Pattern: State changes BEFORE external calls
             delete vault[tokenId];
@@ -143,38 +209,36 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
     }
 
-    function claimRewards() external nonReentrant {
-        // Implementation for claiming KINGZ token rewards
-        uint256 totalRewards = 0;
-        uint256[] memory stakedTokens = ownerToStakedTokens[msg.sender];
+    // function claimRewards() external nonReentrant {
+    //     // Implementation for claiming KINGZ token rewards
+    //     uint256 totalRewards = 0;
+    //     uint256[] memory stakedTokens = ownerToStakedTokens[msg.sender];
 
-        for (uint256 i = 0; i < stakedTokens.length; ++i) {
-            uint256 tokenId = stakedTokens[i];
-            uint256 rewards = _calculateRewards(tokenId);
-            if (rewards > 0) {
-                totalRewards += rewards;
-                vault[tokenId].lastUpdateTime = block.timestamp; // Update last claim time
-            }
-        }
+    //     for (uint256 i = 0; i < stakedTokens.length; ++i) {
+    //         uint256 tokenId = stakedTokens[i];
+    //         uint256 rewards = _calculateRewards(tokenId);
+    //         if (rewards > 0) {
+    //             totalRewards += rewards;
+    //              // Update last claim time for the token
+    //             vault[tokenId].lastUpdateTime = block.timestamp;
+    //         }
+    //     }
 
-        if (totalRewards > 0) {
-            kingzToken.mint(msg.sender, totalRewards);
-            emit RewardsClaimed(msg.sender, totalRewards);
-        }
+    //     if (totalRewards > 0) {
+    //         kingzToken.mint(msg.sender, totalRewards);
+    //         emit RewardsClaimed(msg.sender, totalRewards);
+    //     }
+    // }
+
+
+    function _earned(uint256 tokenId) internal view returns (uint256) {
+        return tokenRewards[tokenId] + (rewardPerDevKingzStored - tokenRewardPerDevKingzPaid[tokenId]);
     }
 
-    function calculateRewards(uint256 tokenId) external view returns (uint256) {
-        // Implementation for calculating rewards for a owner
-        return _calculateRewards(tokenId);
-    }
-
-    function _calculateRewards(uint256 tokenId) internal view returns (uint256) {
-        StakerInfo storage stakerInfo = vault[tokenId];
-        if (stakerInfo.owner == address(0)) {
-            return 0; // Not staked
-        }
-        uint256 stakingDuration = block.timestamp - stakerInfo.lastUpdateTime;
-        return stakingDuration * REWARD_RATE_PER_SECOND;
+    function _updateReward(uint256 tokenId) internal {
+        tokenRewards[tokenId] = _earned(tokenId);
+        // snapshot current accumulator
+        tokenRewardPerDevKingzPaid[tokenId] = rewardPerDevKingzStored;
     }
 
     function _removeTokenFromOwnerArray(address owner, uint256 tokenId) internal {
@@ -203,7 +267,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         StakerInfo storage stakerInfo = vault[tokenId];
         owner = stakerInfo.owner;
         lastUpdateTime = stakerInfo.lastUpdateTime;
-        pendingRewards = _calculateRewards(tokenId);
+        pendingRewards = _earned(tokenId);
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) public pure override returns (bytes4) {
