@@ -25,6 +25,7 @@ contract DeployStakeDevKingz is Script {
         KingzToken kingzToken = new KingzToken(address(this));
         StakeDevKingz stakeDevKingz = new StakeDevKingz(devKingzAddress, address(kingzToken));
         kingzToken.transferOwnership(address(stakeDevKingz));
+        stakeDevKingz.grantRole(stakeDevKingz.DEFAULT_ADMIN_ROLE(), msg.sender);
         return (stakeDevKingz, kingzToken);
     }
 }

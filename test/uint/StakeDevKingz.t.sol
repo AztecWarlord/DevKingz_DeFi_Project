@@ -330,25 +330,30 @@ contract StakeDevKingzTest is Test {
         _;
     }
 
-    function testPendingRewardsAfterTimeElapsed() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
-        uint256 tokenId = 0; // Token minted and staked by modifiers
-        uint256 expectedRewards = 1 days * REWARD_RATE_PER_SECOND;
-        uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
-        assertEq(actualRewards, expectedRewards);
-        console.log("Expected rewards after 1 day:", expectedRewards);
-        console.log("Actual rewards calculated:", actualRewards);
-    }
+function testPendingRewardsAfterDistribution() external mintDevKingzNFT stakeDevKingzNFTMod {
+    uint256 distributeAmount = 86400 * 1e18;
+    
+    // Only 1 NFT staked so it gets 100% of distribution
+    stakeDevKingz.distributeRewards(distributeAmount);
+    
+    uint256 actualRewards = stakeDevKingz.calculateRewards(0);
+    assertEq(actualRewards, distributeAmount); // 1 NFT = 100% share
+}
 
-    function testPendingRewardsForMultipleNFTs() external mintMultipleNFTs stakeMultipleNFTs advanceTime(2 days) {
-        uint256 expectedRewardsPerNFT = 2 days * REWARD_RATE_PER_SECOND;
-        for (uint256 tokenId = 0; tokenId < 3; tokenId++) {
-            uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
-            assertEq(actualRewards, expectedRewardsPerNFT);
-            console.log("Expected rewards for tokenId", tokenId, ":", expectedRewardsPerNFT);
-            console.log("Actual rewards calculated for tokenId", tokenId, ":", actualRewards);
-            console.log("Total rewards for all 3 NFTs should be:", expectedRewardsPerNFT * 3);
-        }
+function testPendingRewardsForMultipleNFTs() external mintMultipleNFTs stakeMultipleNFTs {
+    uint256 distributeAmount = 86400 * 1e18;
+    uint256 expectedRewardsPerNFT = distributeAmount / 3; // split across 3 staked NFTs
+
+    // Distribute once BEFORE checking all tokens
+    stakeDevKingz.distributeRewards(distributeAmount);
+
+    for (uint256 tokenId = 0; tokenId < 3; tokenId++) {
+        uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
+        assertEq(actualRewards, expectedRewardsPerNFT);
+        console.log("Expected rewards for tokenId", tokenId, ":", expectedRewardsPerNFT);
+        console.log("Actual rewards for tokenId", tokenId, ":", actualRewards);
     }
+}
 
     // function testUnstakeCalculatesCorrectRewards() external {
     // }
