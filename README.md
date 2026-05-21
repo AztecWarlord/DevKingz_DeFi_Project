@@ -16,7 +16,7 @@ DevKingz DeFi currently includes:
 The goal is to unify the DevKingz NFT project with a gamified DeFi ecosystem and build long-term, real utility through sustainable token incentives and product expansion.
 
 ## Features
-
+- Chainlink VRF for randomized NFT minting.
 - Stake DevKingz NFTs for yield in `KINGZ`.
 - ERC20-based rewards distribution.
 - Foundry-native smart contract development and testing.
@@ -89,7 +89,7 @@ No License listed.
 ## Acknowledgments
 
 - Foundry
-- Chainlink
+- ChainlinkVRF
 - OpenZeppelin
 - Cyfrin/foundry-devops
 
