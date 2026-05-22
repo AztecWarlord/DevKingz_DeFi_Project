@@ -42,7 +42,6 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
     struct StakerInfo {
         address owner;
-        uint256 lastUpdateTime;
     }
 
     // Mappings
@@ -105,15 +104,17 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
 
         if (claimableRewards > 0) {
-            // Transfer from contract balance (minted at distribution time)
-            kingzToken.transfer(msg.sender, claimableRewards);
-            emit RewardsClaimed(msg.sender, claimableRewards);
+            uint256 transferAmount = claimableRewards / 1e18;
+            kingzToken.transfer(msg.sender, transferAmount);
+            emit RewardsClaimed(msg.sender, transferAmount);
         }
     }
 
     /**
-     * @notice Distributes a fixed amount of KINGZ split pro-rata across all staked NFTs
-     * @param amount Total amount of KINGZ to distribute among stakers.
+     * @notice Distributes KINGZ pro-rata across all staked NFTs.
+     * @dev Due to integer division, up to (totalStakedDevKingz - 1) wei may be
+     *      irrecoverably lost per distribution when `amount` is not exactly
+     *      divisible by `totalStakedDevKingz`. This is expected behavior.
      */
     function distributeRewards(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (totalStakedDevKingz == 0) revert StakeDevKingz__NoStakedNFTs();
@@ -133,7 +134,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
      * @notice Returns the pending rewards for a given tokenId
      */
     function calculateRewards(uint256 tokenId) external view returns (uint256) {
-        return _earned(tokenId);
+        return _earned(tokenId) / 1e18; // Return the actual reward amount (after scaling down)
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -146,7 +147,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
         // Implementation for staking DevKingz NFTs
         uint256 length = tokenIds.length;
-        for (uint256 i = 0; i < length; ++i) {
+        for (uint256 i = 0; i < length;) {
             uint256 tokenId = tokenIds[i];
             unchecked {
                 ++i;
@@ -159,7 +160,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
             _updateReward(tokenId);
 
             // Record the staking
-            vault[tokenId] = StakerInfo({owner: msg.sender, lastUpdateTime: block.timestamp});
+            vault[tokenId] = StakerInfo({owner: msg.sender});
 
             // Add to owner's staked tokens
             ownerToStakedTokens[msg.sender].push(tokenId);
@@ -205,8 +206,9 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
 
             // Transfer rewards if any (after state changes)
             if (pendingRewards > 0) {
-                kingzToken.transfer(msg.sender, pendingRewards);
-                emit RewardsClaimed(msg.sender, pendingRewards);
+                uint256 transferAmount = pendingRewards / 1e18;
+                kingzToken.transfer(msg.sender, transferAmount);
+                emit RewardsClaimed(msg.sender, transferAmount);
             }
 
             unchecked {
@@ -215,13 +217,16 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
     }
 
+    // tokenRewards stores scaled values (not yet divided by 1e18)
+
     function _earned(uint256 tokenId) internal view returns (uint256) {
-        return tokenRewards[tokenId] + (rewardPerDevKingzStored - tokenRewardPerDevKingzPaid[tokenId] ) / 1e18;
+    // return full scaled value — no division here
+    return tokenRewards[tokenId]
+        + (rewardPerDevKingzStored - tokenRewardPerDevKingzPaid[tokenId]);
     }
 
     function _updateReward(uint256 tokenId) internal {
-        tokenRewards[tokenId] = _earned(tokenId);
-        // snapshot current accumulator
+        tokenRewards[tokenId] = _earned(tokenId); // stores scaled value
         tokenRewardPerDevKingzPaid[tokenId] = rewardPerDevKingzStored;
     }
 
@@ -248,11 +253,10 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     function getStakerInfo(uint256 tokenId)
         external
         view
-        returns (address owner, uint256 lastUpdateTime, uint256 pendingRewards)
+        returns (address owner, uint256 pendingRewards)
     {
         StakerInfo storage stakerInfo = vault[tokenId];
         owner = stakerInfo.owner;
-        lastUpdateTime = stakerInfo.lastUpdateTime;
         pendingRewards = _earned(tokenId);
     }
 

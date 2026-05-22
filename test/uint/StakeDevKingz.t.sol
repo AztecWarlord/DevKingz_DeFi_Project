@@ -25,7 +25,6 @@ contract StakeDevKingzTest is Test {
         address owner;
         uint256[] tokenIds;
         uint256 rewards;
-        uint256 lastUpdateTime;
     }
 
     address public USER = makeAddr("user");
@@ -78,7 +77,6 @@ contract StakeDevKingzTest is Test {
         // Stake the minted NFT (tokenId 0)
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0; // Explicitly set tokenId
-        uint256 stakingTime = block.timestamp;
         uint256 initialCount = stakeDevKingz.totalStakedDevKingz();
         stakeDevKingz.stakeNFTs(tokenIds);
 
@@ -87,11 +85,9 @@ contract StakeDevKingzTest is Test {
         assertEq(devKingz.balanceOf(USER), 0);
 
         // Verify vault updated
-        (address owner, uint256 lastUpdateTime) = stakeDevKingz.vault(0);
-        assertEq(lastUpdateTime, stakingTime);
+        (address owner) = stakeDevKingz.vault(0);
         assertEq(owner, USER);
         assertEq(stakeDevKingz.totalStakedDevKingz(), initialCount + 1);
-        console.log("Last update time recorded in vault:", lastUpdateTime);
         console.log("Total staked DevKingz increased correctly.", stakeDevKingz.totalStakedDevKingz());
         vm.stopPrank();
     }
@@ -180,9 +176,8 @@ contract StakeDevKingzTest is Test {
 
         uint256 mintedDevs = 3;
         for (uint256 i = 0; i < mintedDevs; i++) {
-            (address owner, uint256 lastUpdateTime) = stakeDevKingz.vault(i);
+            (address owner) = stakeDevKingz.vault(i);
             assertEq(owner, USER);
-            assertEq(lastUpdateTime, block.timestamp);
         }
 
         assertEq(stakeDevKingz.totalStakedDevKingz(), 3);
@@ -234,9 +229,8 @@ contract StakeDevKingzTest is Test {
         assertEq(devKingz.balanceOf(address(stakeDevKingz)), 0);
 
         // Verify vault entry cleared
-        (address owner, uint256 lastUpdateTime) = stakeDevKingz.vault(tokenId);
+        (address owner) = stakeDevKingz.vault(tokenId);
         assertEq(owner, address(0));
-        assertEq(lastUpdateTime, 0);
 
         // Verify total staked count decremented
         assertEq(stakeDevKingz.totalStakedDevKingz(), initialCount - 1);
@@ -330,35 +324,53 @@ contract StakeDevKingzTest is Test {
         _;
     }
 
-function testPendingRewardsAfterDistribution() external mintDevKingzNFT stakeDevKingzNFTMod {
-    uint256 distributeAmount = 86400 * 1e18;
-    
-    // Only 1 NFT staked so it gets 100% of distribution
-    stakeDevKingz.distributeRewards(distributeAmount);
-    
-    uint256 actualRewards = stakeDevKingz.calculateRewards(0);
-    assertEq(actualRewards, distributeAmount); // 1 NFT = 100% share
-}
-
-function testPendingRewardsForMultipleNFTs() external mintMultipleNFTs stakeMultipleNFTs {
-    uint256 distributeAmount = 86400 * 1e18;
-    uint256 expectedRewardsPerNFT = distributeAmount / 3; // split across 3 staked NFTs
-
-    // Distribute once BEFORE checking all tokens
-    stakeDevKingz.distributeRewards(distributeAmount);
-
-    for (uint256 tokenId = 0; tokenId < 3; tokenId++) {
-        uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
-        assertEq(actualRewards, expectedRewardsPerNFT);
-        console.log("Expected rewards for tokenId", tokenId, ":", expectedRewardsPerNFT);
-        console.log("Actual rewards for tokenId", tokenId, ":", actualRewards);
+    function testPendingRewardsAfterDistribution() external mintDevKingzNFT stakeDevKingzNFTMod {
+        uint256 distributeAmount = 10000 * 1e18;
+        
+        // Only 1 NFT staked so it gets 100% of distribution
+        stakeDevKingz.distributeRewards(distributeAmount);
+        
+        uint256 actualRewards = stakeDevKingz.calculateRewards(0);
+        assertEq(actualRewards, distributeAmount); // 1 NFT = 100% share
     }
-}
 
-    // function testUnstakeCalculatesCorrectRewards() external {
-    // }
+    function testPendingRewardsForMultipleNFTs() external mintMultipleNFTs stakeMultipleNFTs {
+        uint256 distributeAmount = 10000 * 1e18;
+        uint256 expectedRewardsPerNFT = distributeAmount / 3; // split across 3 staked NFTs
 
-    // function testCannotUnstakeSameTokenTwice() external {
-    // }
+        // Distribute once BEFORE checking all tokens
+        stakeDevKingz.distributeRewards(distributeAmount);
+
+        for (uint256 tokenId = 0; tokenId < 3; tokenId++) {
+            uint256 actualRewards = stakeDevKingz.calculateRewards(tokenId);
+            assertEq(actualRewards, expectedRewardsPerNFT);
+            console.log("Expected rewards for tokenId", tokenId, ":", expectedRewardsPerNFT);
+            console.log("Actual rewards for tokenId", tokenId, ":", actualRewards);
+        }
+    }
+
+        // function testUnstakeCalculatesCorrectRewards() external {
+        // }
+
+        // function testCannotUnstakeSameTokenTwice() external {
+        // }
+        
+    function testRewardPrecisionWithUnevenDistribution() external mintMultipleNFTs stakeMultipleNFTs {
+        uint256 distributeAmount = 100e18;
+        stakeDevKingz.distributeRewards(distributeAmount);
+
+        uint256 r0 = stakeDevKingz.calculateRewards(0);
+        uint256 r1 = stakeDevKingz.calculateRewards(1);
+        uint256 r2 = stakeDevKingz.calculateRewards(2);
+
+        uint256 totalClaimed = r0 + r1 + r2;
+
+        // Dust loss is expected — total claimed will be within 1 token unit of distributed
+        assertApproxEqAbs(totalClaimed, distributeAmount, 1e18);
+        // Each token gets equal share
+        assertEq(r0, r1);
+        assertEq(r1, r2);
+    }
+
 }
 
