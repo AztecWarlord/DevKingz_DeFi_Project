@@ -349,11 +349,31 @@ contract StakeDevKingzTest is Test {
         }
     }
 
-        // function testUnstakeCalculatesCorrectRewards() external {
-        // }
+        function testUnstakeCalculatesCorrectRewards() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
+            uint256 distributeAmount = 10000 * 1e18;
+            stakeDevKingz.distributeRewards(distributeAmount);
+            // Calculate expected rewards based on time staked and distribution
+            uint256 expectedRewards = distributeAmount;
+            vm.startPrank(USER);
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 0; // Token minted and staked by modifiers
+            stakeDevKingz.unstakeNFT(tokenIds);
+            uint256 actualRewards = kingzToken.balanceOf(USER);
+            assertEq(actualRewards, expectedRewards);
+            console.log("Expected rewards:", expectedRewards);
+            console.log("Actual rewards:", actualRewards);
+            vm.stopPrank();
+        }
 
-        // function testCannotUnstakeSameTokenTwice() external {
-        // }
+        function testCannotUnstakeSameTokenTwice() external mintMultipleNFTs stakeMultipleNFTs {
+            vm.startPrank(USER);
+            uint256[] memory tokenIds = new uint256[](1);
+            tokenIds[0] = 0;
+            stakeDevKingz.unstakeNFT(tokenIds);
+            vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__TokenNotStaked.selector, tokenIds[0]));
+            stakeDevKingz.unstakeNFT(tokenIds);
+            vm.stopPrank();
+        }
         
     function testRewardPrecisionWithUnevenDistribution() external mintMultipleNFTs stakeMultipleNFTs {
         uint256 distributeAmount = 100e18;
