@@ -64,7 +64,6 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     error StakeDevKingz__EmptyTokenArray();
     error StakeDevKingz__NotTokenContract();
     error StakeDevKingz__TokenAlreadyStaked(uint256 tokenId);
-    // added refactor errors
     error StakeDevKingz__NoStakedNFTs();
     error StakeDevKingz__ZeroAmount(); // For zero reward distribution earnings
 
