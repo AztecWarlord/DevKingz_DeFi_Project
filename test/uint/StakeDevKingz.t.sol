@@ -74,10 +74,7 @@ contract StakeDevKingzTest is Test {
     }
 
     function testConstructorSetsAdmin() external view {
-        assertEq(
-            stakeDevKingz.hasRole(stakeDevKingz.DEFAULT_ADMIN_ROLE(), address(this)),
-            true
-        );
+        assertEq(stakeDevKingz.hasRole(stakeDevKingz.DEFAULT_ADMIN_ROLE(), address(this)), true);
         console.log("Constructor sets correct admin address.");
     }
 
@@ -129,7 +126,6 @@ contract StakeDevKingzTest is Test {
 
     function testRevertsWhenStakingAlreadyStakedToken() external mintDevKingzNFT stakeDevKingzNFTMod {
         vm.startPrank(USER);
-        devKingz.setApprovalForAll(address(stakeDevKingz), true);
 
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0;
@@ -338,7 +334,7 @@ contract StakeDevKingzTest is Test {
         _;
     }
 
-    function testCalulateRewards() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
+    function testCalculateRewards() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
         uint256 distributeAmount = 86400 * 1e18;
         stakeDevKingz.distributeRewards(distributeAmount);
         uint256 expectedRewards = distributeAmount;
@@ -366,10 +362,10 @@ contract StakeDevKingzTest is Test {
 
     function testPendingRewardsAfterDistribution() external mintDevKingzNFT stakeDevKingzNFTMod {
         uint256 distributeAmount = 10000 * 1e18;
-        
+
         // Only 1 NFT staked so it gets 100% of distribution
         stakeDevKingz.distributeRewards(distributeAmount);
-        
+
         uint256 actualRewards = stakeDevKingz.calculateRewards(0);
         assertEq(actualRewards, distributeAmount); // 1 NFT = 100% share
     }
@@ -388,8 +384,6 @@ contract StakeDevKingzTest is Test {
             console.log("Actual rewards for tokenId", tokenId, ":", actualRewards);
         }
     }
-
-
 
     function testUnstakeCalculatesCorrectRewards() external mintDevKingzNFT stakeDevKingzNFTMod advanceTime(1 days) {
         uint256 distributeAmount = 10000 * 1e18;
@@ -416,7 +410,7 @@ contract StakeDevKingzTest is Test {
         stakeDevKingz.unstakeNFT(tokenIds);
         vm.stopPrank();
     }
-        
+
     function testRewardPrecisionWithUnevenDistribution() external mintMultipleNFTs stakeMultipleNFTs {
         uint256 distributeAmount = 100e18;
         stakeDevKingz.distributeRewards(distributeAmount);
@@ -439,5 +433,56 @@ contract StakeDevKingzTest is Test {
         stakeDevKingz.distributeRewards(100e18);
     }
 
+    // New Tests -> need to test edge cases around distribution and claiming, especially with multiple NFTs and multiple distributions before claiming
+
+    // distributeRewards access control
+    function testDistributeRevertsForNonAdmin() external mintDevKingzNFT stakeDevKingzNFTMod {
+        vm.prank(USER);
+        vm.expectRevert();
+        stakeDevKingz.distributeRewards(100e18);
+    }
+
+    // claimRewards with nothing staked — silent no-op
+    function testClaimRewardsWithNothingStakedDoesNothing() external {
+        vm.prank(USER);
+        stakeDevKingz.claimRewards();
+        assertEq(kingzToken.balanceOf(USER), 0);
+    }
+
+
+    // multiple distributions accumulate correctly before a single claim
+    function testMultipleDistributionsAccumulate() external mintDevKingzNFT stakeDevKingzNFTMod {
+        stakeDevKingz.distributeRewards(100e18);
+        stakeDevKingz.distributeRewards(200e18);
+        assertEq(stakeDevKingz.calculateRewards(0), 300e18);
+        vm.prank(USER);
+        stakeDevKingz.claimRewards();
+        assertEq(kingzToken.balanceOf(USER), 300e18);
+    }
+
+    // restake after unstake gets no phantom rewards from before
+    function testRestakeAfterUnstakeNoPhantomRewards() external mintDevKingzNFT stakeDevKingzNFTMod {
+        stakeDevKingz.distributeRewards(100e18);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 0;
+        vm.prank(USER);
+        stakeDevKingz.unstakeNFT(ids); // claims 100e18
+        // restake
+        vm.startPrank(USER);
+        devKingz.setApprovalForAll(address(stakeDevKingz), true);
+        stakeDevKingz.stakeNFTs(ids);
+        vm.stopPrank();
+        // distribute again
+        stakeDevKingz.distributeRewards(50e18);
+        assertEq(stakeDevKingz.calculateRewards(0), 50e18); // only new distribution
+    }
+
+    // unstake empty array
+    function testUnstakeRevertsWithEmptyArray() external {
+        vm.prank(USER);
+        uint256[] memory empty = new uint256[](0);
+        vm.expectRevert(abi.encodeWithSelector(StakeDevKingz.StakeDevKingz__EmptyTokenArray.selector));
+        stakeDevKingz.unstakeNFT(empty);
+    }
 }
 

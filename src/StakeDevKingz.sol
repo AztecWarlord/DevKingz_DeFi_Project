@@ -219,9 +219,8 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     // tokenRewards stores scaled values (not yet divided by 1e18)
 
     function _earned(uint256 tokenId) internal view returns (uint256) {
-    // return full scaled value — no division here
-    return tokenRewards[tokenId]
-        + (rewardPerDevKingzStored - tokenRewardPerDevKingzPaid[tokenId]);
+        // return full scaled value — no division here
+        return tokenRewards[tokenId] + (rewardPerDevKingzStored - tokenRewardPerDevKingzPaid[tokenId]);
     }
 
     function _updateReward(uint256 tokenId) internal {
@@ -249,11 +248,7 @@ contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     }
 
     // Added for testing and transparency: Get staker info for a specific tokenId
-    function getStakerInfo(uint256 tokenId)
-        external
-        view
-        returns (address owner, uint256 pendingRewards)
-    {
+    function getStakerInfo(uint256 tokenId) external view returns (address owner, uint256 pendingRewards) {
         StakerInfo storage stakerInfo = vault[tokenId];
         owner = stakerInfo.owner;
         pendingRewards = _earned(tokenId);
