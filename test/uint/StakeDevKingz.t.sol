@@ -2,14 +2,15 @@
 
 pragma solidity ^0.8.19;
 
+// import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
+// import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {StakeDevKingz} from "../../src/StakeDevKingz.sol";
-import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {DeployStakeDevKingz} from "../../script/DeployStakeDevKingz.s.sol";
-import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
 import {KingzToken} from "../../src/kingzToken.sol";
-// import {DevKingz} from "../../src/devKingz.sol";
-// import {DeployDevKingz} from "../../script/DeployDevKingz.s.sol";
-// import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {DevKingz} from "../../src/devKingz.sol";
+import {DeployDevKingz} from "../../script/DeployDevKingz.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink-brownie/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -18,6 +19,9 @@ contract StakeDevKingzTest is Test {
     StakeDevKingz public stakeDevKingz;
     DevKingz public devKingz;
     KingzToken public kingzToken;
+    DeployDevKingz public devKingzDeployer;
+    HelperConfig public helperConfig;
+    VRFCoordinatorV2_5Mock public vrfCoordinator;
 
     address public initialOwner = makeAddr("owner");
 
@@ -30,10 +34,13 @@ contract StakeDevKingzTest is Test {
     address public USER = makeAddr("user");
     address public SCAMMER = makeAddr("scammer");
     address public ADMIN = makeAddr("admin");
-    uint256 public constant STARTING_USER_BALANCE = 10 ether;
-    uint256 public constant CONTRACT_BALANCE = 10 ether;
+    uint256 public constant LOCAL_CHAIN_ID = 31337;
+    uint256 public constant STARTING_USER_BALANCE = 100 ether;
+    uint256 public constant CONTRACT_BALANCE = 100 ether;
+    uint256 public constant SUB_FUND_AMOUNT = 1000 ether; // 100 LINK
     uint256 internal constant REWARD_RATE_PER_SECOND = 1e18; // 1
     address public devKingzAddress;
+    uint256 public mintFee;
     string public tokenUri = "ipfs://exampleTokenUri";
 
     mapping(uint256 => StakerInfo) private vault; // tokenId => Staker
@@ -43,8 +50,14 @@ contract StakeDevKingzTest is Test {
     event RewardsClaimed(address indexed owner, uint256 amount);
 
     function setUp() external {
-        DeployMockDevKingz mockDeployer = new DeployMockDevKingz();
-        devKingz = mockDeployer.deployMockDevKingz();
+        DeployDevKingz deployer = new DeployDevKingz();
+        (devKingz, helperConfig) = deployer.deployDevKingz();
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+        mintFee = config.mintFee;
+        vrfCoordinator = VRFCoordinatorV2_5Mock(config.vrfCoordinatorV2_5); // ✅ grab coordinator
+        uint256 subId = devKingz.getSubId();
+        vrfCoordinator.fundSubscription(subId, SUB_FUND_AMOUNT); // ✅ fund it with 1000 LINK
+        vm.deal(USER, STARTING_USER_BALANCE);
         DeployStakeDevKingz stakeDeployer = new DeployStakeDevKingz();
         (stakeDevKingz, kingzToken) = stakeDeployer.deployStakeDevKingz(address(devKingz));
         console.log("StakeDevKingz deployed at:", address(stakeDevKingz));
@@ -56,8 +69,9 @@ contract StakeDevKingzTest is Test {
     modifier mintDevKingzNFT() {
         vm.startPrank(USER);
         vm.deal(USER, STARTING_USER_BALANCE);
-        devKingz.mintNft(tokenUri);
+        uint256 requestId = devKingz.requestNft{value: mintFee}();
         vm.stopPrank();
+        VRFCoordinatorV2_5Mock(address(vrfCoordinator)).fulfillRandomWords(requestId, address(devKingz));
         _;
     }
 
@@ -170,9 +184,14 @@ contract StakeDevKingzTest is Test {
         vm.startPrank(USER);
 
         // Mint additional NFTs
-        devKingz.mintNft(tokenUri);
-        devKingz.mintNft(tokenUri);
+        uint256 req_id1 = devKingz.requestNft{value: mintFee}();
+        uint256 req_id2 = devKingz.requestNft{value: mintFee}();
+        vm.stopPrank(); // Stop pranking to allow VRF fulfillment
 
+        vrfCoordinator.fulfillRandomWords(req_id1, address(devKingz)); // Fulfill for tokenId 1
+        vrfCoordinator.fulfillRandomWords(req_id2, address(devKingz)); // Fulfill for tokenId 2
+
+        vm.startPrank(USER);
         devKingz.setApprovalForAll(address(stakeDevKingz), true);
 
         uint256[] memory tokenIds = new uint256[](3);
@@ -182,11 +201,8 @@ contract StakeDevKingzTest is Test {
 
         stakeDevKingz.stakeNFTs(tokenIds);
 
-        // Verify all vault entries
-
-        uint256 mintedDevs = 3;
-        for (uint256 i = 0; i < mintedDevs; i++) {
-            (address owner) = stakeDevKingz.vault(i);
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            (address owner) = stakeDevKingz.vault(tokenIds[i]);
             assertEq(owner, USER);
         }
 
@@ -251,9 +267,12 @@ contract StakeDevKingzTest is Test {
         // Mint 3 NFTs to USER
         vm.startPrank(USER);
         vm.deal(USER, STARTING_USER_BALANCE);
-        devKingz.mintNft(tokenUri);
-        devKingz.mintNft(tokenUri);
-        devKingz.mintNft(tokenUri);
+        uint256 requestId1 = devKingz.requestNft{value: mintFee}();
+        uint256 requestId2 = devKingz.requestNft{value: mintFee}();
+        uint256 requestId3 = devKingz.requestNft{value: mintFee}();
+        VRFCoordinatorV2_5Mock(address(vrfCoordinator)).fulfillRandomWords(requestId1, address(devKingz));
+        VRFCoordinatorV2_5Mock(address(vrfCoordinator)).fulfillRandomWords(requestId2, address(devKingz));
+        VRFCoordinatorV2_5Mock(address(vrfCoordinator)).fulfillRandomWords(requestId3, address(devKingz));
         vm.stopPrank();
         _;
     }
@@ -403,6 +422,7 @@ contract StakeDevKingzTest is Test {
 
     function testCannotUnstakeSameTokenTwice() external mintMultipleNFTs stakeMultipleNFTs {
         vm.startPrank(USER);
+        vm.deal(USER, STARTING_USER_BALANCE);
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 0;
         stakeDevKingz.unstakeNFT(tokenIds);
