@@ -1,9 +1,30 @@
 // SPDX-License-Identifier: MIT
 
+//  /$$$$$$$                       /$$   /$$ /$$
+// | $$__  $$                     | $$  /$$/|__/
+// | $$  \ $$  /$$$$$$  /$$    /$$| $$ /$$/  /$$ /$$$$$$$   /$$$$$$  /$$$$$$$$
+// | $$  | $$ /$$__  $$|  $$  /$$/| $$$$$/  | $$| $$__  $$ /$$__  $$|____ /$$/
+// | $$  | $$| $$$$$$$$ \  $$/$$/ | $$  $$  | $$| $$  \ $$| $$  \ $$   /$$$$/
+// | $$  | $$| $$_____/  \  $$$/  | $$\  $$ | $$| $$  | $$| $$  | $$  /$$__/
+// | $$$$$$$/|  $$$$$$$   \  $/   | $$ \  $$| $$| $$  | $$|  $$$$$$$ /$$$$$$$$
+// |_______/  \_______/    \_/    |__/  \__/|__/|__/  |__/ \____  $$|________/
+//                                                         /$$  \ $$
+//                                                        |  $$$$$$/
+//                                                         \______/
+//   _
+//  | |__ _  _
+//  | '_ \ || |
+//  |_.__/\_, |
+//        |__/
+//    _____            __                __      __              .__                   .___
+//   /  _  \ _________/  |_  ____   ____/  \    /  \_____ _______|  |   ___________  __| _/
+//  /  /_\  \\___   /\   __\/ __ \_/ ___\   \/\/   /\__  \\_  __ \  |  /  _ \_  __ \/ __ |
+// /    |    \/    /  |  | \  ___/\  \___\        /  / __ \|  | \/  |_(  <_> )  | \/ /_/ |
+// \____|__  /_____ \ |__|  \___  >\___  >\__/\  /  (____  /__|  |____/\____/|__|  \____ |
+//         \/      \/           \/     \/      \/        \/                             \/
+
 pragma solidity ^0.8.19;
 
-// import {DevKingz} from "../mocks/MockDevKingzNFT.sol";
-// import {DeployMockDevKingz} from "../../script/DeployMockDevKingz.s.sol";
 import {StakeDevKingz} from "../../src/StakeDevKingz.sol";
 import {DeployStakeDevKingz} from "../../script/DeployStakeDevKingz.s.sol";
 import {KingzToken} from "../../src/kingzToken.sol";
@@ -14,7 +35,16 @@ import {VRFCoordinatorV2_5Mock} from "@chainlink-brownie/contracts/src/v0.8/vrf/
 import {Test, console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-// This contract will test the functionality of the StakeDevKingz smart contract.
+/**
+ * @title A staking smart contract the cornerstone of DevKingz_DeFi_Project
+ * @author Michael Vargas
+ * @notice This contract is for staking NFTs
+ * @dev Implements Chainlink VRFv2_5 for random rewards distribution, uses OpenZeppelin AccessControl for admin functions, and is designed to work with the DevKingz NFT and KingzToken ERC20 reward token.
+ * @notice The contract allows users to stake their DevKingz NFTs and earn KingzToken rewards based on the time staked and the number of NFTs staked across the platform.
+ * @notice Admins can distribute rewards to stakers, and users can claim their accumulated rewards or unstake their NFTs at any time.
+ * @notice The contract includes robust error handling and emits events for all major actions to facilitate off-chain tracking and
+ */
+
 contract StakeDevKingzTest is Test {
     StakeDevKingz public stakeDevKingz;
     DevKingz public devKingz;
@@ -468,7 +498,6 @@ contract StakeDevKingzTest is Test {
         stakeDevKingz.claimRewards();
         assertEq(kingzToken.balanceOf(USER), 0);
     }
-
 
     // multiple distributions accumulate correctly before a single claim
     function testMultipleDistributionsAccumulate() external mintDevKingzNFT stakeDevKingzNFTMod {

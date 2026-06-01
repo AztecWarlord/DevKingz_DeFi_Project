@@ -1,40 +1,38 @@
 // SPDX-License-Identifier: MIT
 
-// This is the Staking rewards token for the DevKingz staking project.
-
-// Layout of Contract:
-// version
-// imports
-// errors
-// interfaces, libraries, contracts
-// Type declarations
-// State variables
-// Events
-// Modifiers
-// Functions
-
-// Layout of Functions:
-// constructor
-// receive function (if exists)
-// fallback function (if exists)
-// external
-// public
-// internal
-// private
-// view & pure functions
+//  /$$$$$$$                       /$$   /$$ /$$
+// | $$__  $$                     | $$  /$$/|__/
+// | $$  \ $$  /$$$$$$  /$$    /$$| $$ /$$/  /$$ /$$$$$$$   /$$$$$$  /$$$$$$$$
+// | $$  | $$ /$$__  $$|  $$  /$$/| $$$$$/  | $$| $$__  $$ /$$__  $$|____ /$$/
+// | $$  | $$| $$$$$$$$ \  $$/$$/ | $$  $$  | $$| $$  \ $$| $$  \ $$   /$$$$/
+// | $$  | $$| $$_____/  \  $$$/  | $$\  $$ | $$| $$  | $$| $$  | $$  /$$__/
+// | $$$$$$$/|  $$$$$$$   \  $/   | $$ \  $$| $$| $$  | $$|  $$$$$$$ /$$$$$$$$
+// |_______/  \_______/    \_/    |__/  \__/|__/|__/  |__/ \____  $$|________/
+//                                                         /$$  \ $$
+//                                                        |  $$$$$$/
+//                                                         \______/
+//   _
+//  | |__ _  _
+//  | '_ \ || |
+//  |_.__/\_, |
+//        |__/
+//    _____            __                __      __              .__                   .___
+//   /  _  \ _________/  |_  ____   ____/  \    /  \_____ _______|  |   ___________  __| _/
+//  /  /_\  \\___   /\   __\/ __ \_/ ___\   \/\/   /\__  \\_  __ \  |  /  _ \_  __ \/ __ |
+// /    |    \/    /  |  | \  ___/\  \___\        /  / __ \|  | \/  |_(  <_> )  | \/ /_/ |
+// \____|__  /_____ \ |__|  \___  >\___  >\__/\  /  (____  /__|  |____/\____/|__|  \____ |
+//         \/      \/           \/     \/      \/        \/                             \/
 
 pragma solidity ^0.8.19;
 
 import {ERC20, ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/*
+/**
  * @title Kingz Token (KINGZ)
  * @author Michael Vargas
- * Minting (Stability Mechanism):
- * Collateral Type: Crypto
- *
- * This is the contract meant to be owned by StakeDevKingz. It is a ERC20 token that can be minted and burned by the StakeDevKingz smart contract.
+ * @notice This contract is for minting and burning KINGZ tokens
+ * @dev Implements ERC20Burnable and Ownable from OpenZeppelin
  */
 
 contract KingzToken is ERC20Burnable, Ownable {

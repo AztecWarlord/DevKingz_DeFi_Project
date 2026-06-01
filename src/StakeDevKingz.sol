@@ -25,12 +25,19 @@
 
 pragma solidity ^0.8.19;
 
-// import {DevKingz} from "./devKingz.sol";
-import {DevKingz} from "../test/mocks/MockDevKingzNFT.sol";
+import {DevKingz} from "./devKingz.sol";
+//import {DevKingz} from "../test/mocks/MockDevKingzNFT.sol";
 import {KingzToken} from "./kingzToken.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
+/**
+ * @title A NFT staking contract for DevKingz_DeFi_Project
+ * @author Michael Vargas
+ * @notice This contract allows users to stake their DevKingz NFTs and earn KINGZ token rewards
+ * @dev Implements AccessControl, ReentrancyGuard, and IERC721Receiver from OpenZeppelin
+ */
 
 contract StakeDevKingz is AccessControl, ReentrancyGuard, IERC721Receiver {
     // State Variables

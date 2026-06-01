@@ -29,10 +29,14 @@ import {Script} from "forge-std/Script.sol";
 import {DevKingz} from "../src/devKingz.sol";
 import {HelperConfig, CodeConstants} from "../script/HelperConfig.s.sol";
 import {AddConsumer, CreateSubscription, FundSubscription} from "../script/Interactions.s.sol";
-/*
- * @dev This import is used to avoid overflow from the VRFCoordinatorV2_5Mock when testing locally.
-*/
 import {VRFCoordinatorV2_5Mock} from "../test/mocks/VRFCoordinatorV2_5Mock_V2.sol";
+
+/**
+ * @title A deployment script for DevKingz_DeFi_Project
+ * @author Michael Vargas
+ * @notice This script is for deploying the DevKingz contract and setting up the Chainlink VRF subscription
+ * @dev Implements Chainlink VRFv2_5
+ */
 
 contract DeployDevKingz is Script, CodeConstants {
     function run() public {

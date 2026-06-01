@@ -32,6 +32,13 @@ import {HelperConfig, CodeConstants} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink-brownie/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
+/**
+ * @title A NFT smart contract the cornerstone of DevKingz_DeFi_Project
+ * @author Michael Vargas
+ * @notice This contract is for minting NFTs
+ * @dev Implements Chainlink VRFv2_5
+ */
+
 contract DevKingzTest is Test {
     string constant NFT_NAME = "DevKingz";
     string constant NFT_SYMBOL = "DKZ";

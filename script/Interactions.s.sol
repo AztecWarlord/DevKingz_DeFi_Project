@@ -23,6 +23,13 @@
 // \____|__  /_____ \ |__|  \___  >\___  >\__/\  /  (____  /__|  |____/\____/|__|  \____ |
 //         \/      \/           \/     \/      \/        \/                             \/
 
+/**
+ * @title A NFT interactions smart contract the cornerstone of DevKingz_DeFi_Project
+ * @author Michael Vargas
+ * @notice This contract is for interacting with the NFT contract, including minting and managing subscriptions
+ * @dev Implements Chainlink VRFv2_5
+ */
+
 pragma solidity ^0.8.19;
 
 import {Script, console} from "forge-std/Script.sol";
@@ -31,9 +38,6 @@ import {DevKingz} from "../src/devKingz.sol";
 import {DevOpsTools} from "foundry-devops/src/DevOpsTools.sol";
 import {CodeConstants} from "../script/HelperConfig.s.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
-/*
- * @dev This import is used to avoid overflow from the VRFCoordinatorV2_5Mock when testing locally.
-*/
 import {VRFCoordinatorV2_5Mock} from "../test/mocks/VRFCoordinatorV2_5Mock_V2.sol";
 
 contract CreateSubscription is Script {
