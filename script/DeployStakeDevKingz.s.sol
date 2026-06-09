@@ -37,7 +37,6 @@ import {KingzToken} from "../src/kingzToken.sol";
  */
 
 contract DeployStakeDevKingz is Script {
-
     error DeployStakeDevKingz__DevKingzAddressRequired();
 
     function run() public {
